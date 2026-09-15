@@ -1,8 +1,8 @@
 package main
 
 import (
+	"bytes"
 	_ "embed"
-	"fmt"
 	"html"
 	"io"
 	"log"
@@ -23,6 +23,18 @@ var (
 	regexpURL = regexp.MustCompile(`https://\S+`)
 )
 
+func init() {
+	assetPageJS = bytes.ReplaceAll(assetPageJS, []byte{'\n'}, nil)
+	assetPageJS = bytes.ReplaceAll(assetPageJS, []byte{'\t'}, nil)
+	assetPageJS = bytes.ReplaceAll(assetPageJS, []byte{' '}, nil)
+
+	assetStyle = bytes.ReplaceAll(assetStyle, []byte{'\n'}, nil)
+	assetStyle = bytes.ReplaceAll(assetStyle, []byte{'\t'}, nil)
+	assetStyle = bytes.ReplaceAll(assetStyle, []byte(" {"), []byte("{"))
+	assetStyle = bytes.ReplaceAll(assetStyle, []byte(": "), []byte(":"))
+	assetStyle = bytes.ReplaceAll(assetStyle, []byte(";}"), []byte("}"))
+}
+
 type CachePage struct {
 	Modif   time.Time
 	Title   string
@@ -31,7 +43,6 @@ type CachePage struct {
 }
 
 func handPage(w http.ResponseWriter, r *http.Request) {
-	begin := time.Now()
 	id := strings.TrimPrefix(r.URL.Path, "/m/")
 	mainWebsite, mainId, ok := strings.Cut(id, "@")
 	if !ok {
@@ -41,7 +52,6 @@ func handPage(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html")
 	w.Write(genItem(mainWebsite, mainId))
-	fmt.Fprintf(w, "\n\n<!--page generated in %v-->\n", time.Since(begin))
 }
 
 func genItem(website, id string) (buff []byte) {
