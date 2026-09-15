@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 var (
@@ -17,20 +18,24 @@ var (
 )
 
 func main() {
-	http.HandleFunc("/m/", handPage)
-
-	log.Println("listen ...")
-	log.Fatal(http.ListenAndServe(":8000", &Cache{
+	cache := &Cache{
 		M: make(map[string]*CachePage),
-	}))
+	}
+	go func() {
+		for range time.Tick(5 * time.Second) {
+			cache.Clean()
+		}
+	}()
+	log.Println("listen ...")
+	log.Fatal(http.ListenAndServe(":8000", cache))
 }
 
 type Cache struct {
-	sync.Mutex
+	sync.RWMutex
 	M map[string]*CachePage
 }
 
-func (c *Cache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (cache *Cache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/":
 		w.Header().Set("Content-Type", "text/html")
@@ -42,6 +47,19 @@ func (c *Cache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("User-agent: *\r\nDisallow: /\r\n"))
 	case strings.HasPrefix(r.URL.Path, "/m/"):
-		handPage(w, r)
+		cache.handPage(w, r)
+	}
+}
+
+func (cache *Cache) Clean() {
+	cache.Lock()
+	defer cache.Unlock()
+	now := time.Now()
+	for k, v := range cache.M {
+		if v == nil {
+			delete(cache.M, k)
+		} else if now.Sub(v.Modif) > 5*time.Minute {
+			delete(cache.M, k)
+		}
 	}
 }
