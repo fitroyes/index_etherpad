@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	_ "embed"
+	"flag"
+	"html"
 	"log"
 	"net/http"
 	"strings"
@@ -15,9 +18,17 @@ var (
 
 	//go:embed home.html
 	homeHTML []byte
+
+	about = ""
 )
 
 func main() {
+	flag.StringVar(&about, "about", about, "URL of the about page")
+	addr := flag.String("l", ":8000", "listen address")
+	flag.Parse()
+
+	homeHTML = bytes.ReplaceAll(homeHTML, []byte("<!ABOUT>"), []byte(html.EscapeString(about)))
+
 	cache := &Cache{
 		M: make(map[string]*CachePage),
 	}
@@ -26,8 +37,8 @@ func main() {
 			cache.Clean()
 		}
 	}()
-	log.Println("listen ...")
-	log.Fatal(http.ListenAndServe(":8000", cache))
+	log.Printf("listen %q", *addr)
+	log.Fatal(http.ListenAndServe(*addr, cache))
 }
 
 type Cache struct {

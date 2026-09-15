@@ -70,7 +70,7 @@ func (cache *Cache) genItem(website, id string) (buff []byte) {
 	buff = append(buff, `<link rel=icon href=/favicon.ico type=image/webp>`...)
 	buff = append(buff, `<title>`...)
 	buff = append(buff, titleSafe...)
-	buff = append(buff, `</title>`...)
+	buff = append(buff, `[index] </title>`...)
 	buff = append(buff, `<style>`...)
 	buff = append(buff, assetStyle...)
 	buff = append(buff, `</style>`...)
@@ -84,6 +84,10 @@ func (cache *Cache) genItem(website, id string) (buff []byte) {
 			buff = appendItem(buff, u, cache.GetPage(u[0], u[1]))
 		}
 	}
+
+	buff = append(buff, `<hr><a href='`...)
+	buff = append(buff, html.EscapeString(about)...)
+	buff = append(buff, `'>[about]</a>`...)
 
 	buff = append(buff, `</nav>`...)
 	buff = append(buff, `<iframe></iframe>`...)

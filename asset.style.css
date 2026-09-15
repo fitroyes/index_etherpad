@@ -25,6 +25,10 @@ nav {
 	.fail {
 		font-style: italic;
 	}
+
+	a {
+		color: inherit;
+	}
 }
 
 iframe {
