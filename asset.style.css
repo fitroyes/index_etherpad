@@ -17,6 +17,11 @@ nav {
 		margin: .5rem 0;
 	}
 
+	.item:hover,
+	.selected {
+		text-decoration: underline;
+	}
+
 	.fail {
 		font-style: italic;
 	}

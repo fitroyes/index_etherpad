@@ -1,4 +1,7 @@
 document.querySelectorAll(".item").forEach((item) => {
-	item.onclick = (_) =>
+	document.querySelector(".selected")?.classList?.remove("selected");
+	item.onclick = () => {
+		item.classList.add("selected");
 		document.querySelector("iframe").src = item.dataset.url;
+	};
 });
