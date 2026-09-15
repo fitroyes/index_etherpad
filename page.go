@@ -36,7 +36,7 @@ func init() {
 }
 
 type CachePage struct {
-	Modif   time.Time
+	LastMod time.Time
 	Title   string
 	URL     [][2]string
 	Content string
@@ -44,25 +44,24 @@ type CachePage struct {
 
 func (cache *Cache) handPage(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/m/")
-	log.Printf("meta_page %q", id)
-	mainWebsite, mainId, ok := strings.Cut(id, "@")
+	log.Printf("serve %q", id)
+	mainHost, mainId, ok := strings.Cut(id, "@")
 	if !ok {
 		http.Error(w, "expected: '/m/host@pad_id'", http.StatusBadRequest)
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/html")
-	w.Write(cache.genItem(mainWebsite, mainId))
+	w.Write(cache.genPage(mainHost, mainId))
 }
 
-func (cache *Cache) genItem(website, id string) (buff []byte) {
+func (cache *Cache) genPage(website, id string) (buff []byte) {
 	main := cache.GetPage(website, id)
-	titleSafe := "?"
-	if main != nil {
-		titleSafe = html.EscapeString(main.Title)
+	if main == nil {
+		return genNotReady()
 	}
+	titleSafe := html.EscapeString(main.Title)
 
-	buff = make([]byte, 0)
 	buff = append(buff, `<!DOCTYPE html><html lang=en>`...)
 	buff = append(buff, `<head>`...)
 	buff = append(buff, `<meta charset=utf-8>`...)
@@ -88,12 +87,8 @@ func (cache *Cache) genItem(website, id string) (buff []byte) {
 	buff = append(buff, `<hr><a href='`...)
 	buff = append(buff, html.EscapeString(about)...)
 	buff = append(buff, `'>[about]</a>`...)
-
 	buff = append(buff, `</nav>`...)
 	buff = append(buff, `<iframe></iframe>`...)
-	buff = append(buff, ``...)
-	buff = append(buff, ``...)
-	buff = append(buff, ``...)
 
 	buff = append(buff, `<script>`...)
 	buff = append(buff, assetPageJS...)
@@ -102,55 +97,66 @@ func (cache *Cache) genItem(website, id string) (buff []byte) {
 	return
 }
 
+func genNotReady() (buff []byte) {
+	buff = append(buff, `<!DOCTYPE html><html lang=en>`...)
+	buff = append(buff, `<head>`...)
+	buff = append(buff, `<meta charset=utf-8>`...)
+	buff = append(buff, `<meta name=viewport content="width=device-width,initial-scale=1">`...)
+	buff = append(buff, `<link rel=icon href=/favicon.ico type=image/webp>`...)
+	buff = append(buff, `<meta http-equiv=refresh content=1>`...)
+	buff = append(buff, `<style>`...)
+	buff = append(buff, `body{font-family:sans-serif;font-size:50px;background:#eb5e28}`...)
+	buff = append(buff, `</style>`...)
+	buff = append(buff, `</head><body>`...)
+	buff = append(buff, `Not ready yet. Please wait and retry in some time...<br>`...)
+	return
+}
+
 func appendItem(buff []byte, u [2]string, page *CachePage) []byte {
-	if page == nil {
-		buff = append(buff, `<div class="fail item" data-url="https://`...)
-		buff = append(buff, html.EscapeString(u[0])...)
-		buff = append(buff, "/p/"...)
-		buff = append(buff, html.EscapeString(u[1])...)
-		buff = append(buff, `">* (Fail)@ `...)
-		buff = append(buff, html.EscapeString(u[0])...)
-		buff = append(buff, "@"...)
-		buff = append(buff, html.EscapeString(u[1])...)
-		buff = append(buff, "</div>"...)
-		return buff
+	title := ""
+	if page != nil {
+		title = page.Title
 	} else {
-		buff = append(buff, `<div class=item data-url='https://`...)
-		buff = append(buff, html.EscapeString(u[0])...)
-		buff = append(buff, "/p/"...)
-		buff = append(buff, html.EscapeString(u[1])...)
-		buff = append(buff, `'>* `...)
-		buff = append(buff, html.EscapeString(page.Title)...)
-		buff = append(buff, `</div>`...)
-		return buff
+		title = u[0] + "@" + u[1]
 	}
+
+	buff = append(buff, `<div class=item data-url='https://`...)
+	buff = append(buff, html.EscapeString(u[0])...)
+	buff = append(buff, "/p/"...)
+	buff = append(buff, html.EscapeString(u[1])...)
+	buff = append(buff, `'>* `...)
+	buff = append(buff, html.EscapeString(title)...)
+	buff = append(buff, `</div>`...)
+	return buff
 }
 
-func (cache *Cache) GetPage(website, id string) *CachePage {
-	cache.RLock()
-	if page := cache.M[website+"@"+id]; page != nil {
-		cache.RUnlock()
-		return page
-	}
-	cache.RUnlock()
-
-	page := FetchPage(website, id)
+func (cache *Cache) GetPage(host, id string) (page *CachePage) {
 	cache.Lock()
-	cache.M[website+"@"+id] = page
-	cache.Unlock()
-	return page
+	defer cache.Unlock()
+	page = cache.M[host+"@"+id]
+	if page == nil {
+		go func() {
+			page := FetchPage(host, id)
+			if page != nil {
+				cache.Lock()
+				defer cache.Unlock()
+				cache.M[host+"@"+id] = page
+			}
+		}()
+	}
+	return
 }
 
-func FetchPage(website, id string) *CachePage {
-	response, err := http.Get("https://" + website + "/p/" + id + "/export/txt")
+func FetchPage(host, id string) *CachePage {
+	response, err := http.Get("https://" + host + "/p/" + id + "/export/txt")
 	if err != nil {
-		log.Printf("fetch %q fail:%v", website+"@"+id, err)
+		log.Printf("fetch %q fail:%v", host+"@"+id, err)
 		return nil
 	} else if response.StatusCode != 200 {
-		log.Printf("fetch %q wrong status: %q", website+"@"+id, response.Status)
+		log.Printf("fetch %q wrong status: %q", host+"@"+id, response.Status)
 		return nil
 	}
-	log.Printf("serve %q", website+"@"+id)
+	log.Printf("fetch %q", host+"@"+id)
 
 	data, err := io.ReadAll(response.Body)
 	content := string(data)
@@ -178,10 +184,8 @@ func FetchPage(website, id string) *CachePage {
 		urls = append(urls, [2]string{u.Host, path})
 	}
 
-	time.Sleep(2 * time.Second)
-
 	return &CachePage{
-		Modif:   time.Now(),
+		LastMod: time.Now(),
 		Title:   title,
 		URL:     urls,
 		Content: content,

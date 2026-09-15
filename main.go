@@ -42,7 +42,7 @@ func main() {
 }
 
 type Cache struct {
-	sync.RWMutex
+	sync.Mutex
 	M map[string]*CachePage
 }
 
@@ -66,10 +66,10 @@ func (cache *Cache) Clean() {
 	cache.Lock()
 	defer cache.Unlock()
 	now := time.Now()
-	for k, v := range cache.M {
-		if v == nil {
+	for k, page := range cache.M {
+		if page == nil {
 			delete(cache.M, k)
-		} else if now.Sub(v.Modif) > 5*time.Minute {
+		} else if now.Sub(page.LastMod) > 24*time.Hour {
 			delete(cache.M, k)
 		}
 	}
