@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -21,13 +20,9 @@ var (
 	//go:embed asset.style.css
 	assetStyle []byte
 
-	regexpURL = regexp.MustCompile(`https://[^\s]+`)
+	regexpURL = regexp.MustCompile(`https://\S+`)
 )
 
-type Cache struct {
-	sync.Mutex
-	M map[string]*CachePage
-}
 type CachePage struct {
 	Modif   time.Time
 	Title   string
@@ -61,6 +56,7 @@ func genItem(website, id string) (buff []byte) {
 	buff = append(buff, `<head>`...)
 	buff = append(buff, `<meta charset=utf-8>`...)
 	buff = append(buff, `<meta name=viewport content="width=device-width,initial-scale=1">`...)
+	buff = append(buff, `<link rel=icon href=/favicon.ico type=image/webp>`...)
 	buff = append(buff, `<title>`...)
 	buff = append(buff, titleSafe...)
 	buff = append(buff, `</title>`...)
@@ -70,11 +66,11 @@ func genItem(website, id string) (buff []byte) {
 	buff = append(buff, `</head><body>`...)
 
 	buff = append(buff, `<nav><b>`...)
-	buff = addItem(buff, [2]string{website, id}, main)
+	buff = appendItem(buff, [2]string{website, id}, main)
 	buff = append(buff, `</b>`...)
 	if main != nil && len(main.URL) > 0 {
 		for _, u := range main.URL {
-			buff = addItem(buff, u, FetchPage(u[0], u[1]))
+			buff = appendItem(buff, u, FetchPage(u[0], u[1]))
 		}
 	}
 
@@ -91,9 +87,13 @@ func genItem(website, id string) (buff []byte) {
 	return
 }
 
-func addItem(buff []byte, u [2]string, page *CachePage) []byte {
+func appendItem(buff []byte, u [2]string, page *CachePage) []byte {
 	if page == nil {
-		buff = append(buff, "<div class=fail>* Failed to fetch page: "...)
+		buff = append(buff, `<div class="fail item" data-url="https://`...)
+		buff = append(buff, html.EscapeString(u[0])...)
+		buff = append(buff, "/p/"...)
+		buff = append(buff, html.EscapeString(u[1])...)
+		buff = append(buff, `">* (Fail): `...)
 		buff = append(buff, html.EscapeString(u[0])...)
 		buff = append(buff, ":"...)
 		buff = append(buff, html.EscapeString(u[1])...)
