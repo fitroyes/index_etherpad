@@ -33,9 +33,9 @@ type CachePage struct {
 func handPage(w http.ResponseWriter, r *http.Request) {
 	begin := time.Now()
 	id := strings.TrimPrefix(r.URL.Path, "/m/")
-	mainWebsite, mainId, ok := strings.Cut(id, ":")
+	mainWebsite, mainId, ok := strings.Cut(id, "@")
 	if !ok {
-		http.Error(w, "expected: '/m/host:pad_id'", http.StatusBadRequest)
+		http.Error(w, "expected: '/m/host@pad_id'", http.StatusBadRequest)
 		return
 	}
 
@@ -117,7 +117,7 @@ func FetchPage(website, id string) *CachePage {
 		log.Printf("fetch %q fail:%v", website+":"+id, err)
 		return nil
 	} else if response.StatusCode != 200 {
-		log.Printf("fetch %q wrong status: %q", response.Status)
+		log.Printf("fetch %q wrong status: %q", website+":"+id, response.Status)
 		return nil
 	}
 

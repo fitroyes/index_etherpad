@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang=en>
+
+<head>
+	<meta charset=utf-8>
+	<meta name=viewport content="width=device-width,initial-scale=1">
+	<title>Document</title>
+	<link rel=icon href=/favicon.ico type=image/webp>
+
+	<style>
+		body {
+			margin: 5rem;
+			background: #6CB4EE;
+			font-family: sans;
+			font-size: 50px;
+		}
+
+		input {
+			margin: 0.5rem;
+			font: inherit;
+		}
+
+		input[type=text] {
+			width: 100%;
+		}
+	</style>
+</head>
+
+<body>
+	<label for=u>URL of the pad index:</label>
+	<br>
+	<input type=text id=u placeholder=https://etherpad.org/p/id>
+	<br>
+	<input type=submit id=go value="GO ->">
+
+	<script>
+		go.onclick = () => {
+			const uu = new URL(u.value);
+			location = "/m/" + uu.host + "@" + uu.pathname.slice(3);
+		}
+	</script>

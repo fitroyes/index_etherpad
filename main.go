@@ -11,6 +11,9 @@ import (
 var (
 	//go:embed favicon.webp
 	faviconWEBP []byte
+
+	//go:embed home.html
+	homeHTML []byte
 )
 
 func main() {
@@ -30,7 +33,8 @@ type Cache struct {
 func (c *Cache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/":
-		http.Error(w, "Not implemented", http.StatusNotImplemented)
+		w.Header().Set("Content-Type", "text/html")
+		w.Write(homeHTML)
 	case r.URL.Path == "/favicon.ico":
 		w.Header().Set("Content-Type", "image/webp")
 		w.Write(faviconWEBP)
