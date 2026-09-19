@@ -59,6 +59,8 @@ func (cache *Cache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("User-agent: *\r\nDisallow: /\r\n"))
 	case strings.HasPrefix(r.URL.Path, "/m/"):
 		cache.handPage(w, r)
+	case strings.HasPrefix(r.URL.Path, "/t/"):
+		cache.serveText(w, r)
 	}
 }
 

@@ -1,3 +1,3 @@
-module github.com/fitroyes/meta_etherpad
+module github.com/fitroyes/index_etherpad
 
 go 1.27.1

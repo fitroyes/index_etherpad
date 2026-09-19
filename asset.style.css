@@ -3,7 +3,7 @@ body {
 	display: grid;
 	grid-template-columns: 50ex 1fr;
 	font-family: sans;
-	word-break: break-all;
+	word-break: break-word;
 }
 
 nav {
@@ -20,10 +20,6 @@ nav {
 	.item:hover,
 	.selected {
 		text-decoration: underline;
-	}
-
-	.fail {
-		font-style: italic;
 	}
 
 	a {

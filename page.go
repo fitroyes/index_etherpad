@@ -42,6 +42,25 @@ type CachePage struct {
 	Content string
 }
 
+func (cache *Cache) serveText(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/t/")
+	log.Printf("text  %q", id)
+	host, is, ok := strings.Cut(id, "@")
+	if !ok {
+		http.Error(w, "expected: '/t/host@pad_id'", http.StatusBadRequest)
+		return
+	}
+
+	page := cache.GetPage(host, is)
+	if page == nil {
+		http.Error(w, "page not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain;charset=utf-8")
+	io.WriteString(w, page.Content)
+}
+
 func (cache *Cache) handPage(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/m/")
 	log.Printf("serve %q", id)
@@ -120,12 +139,21 @@ func appendItem(buff []byte, u [2]string, page *CachePage) []byte {
 		title = u[0] + "@" + u[1]
 	}
 
-	buff = append(buff, `<div class=item data-url='https://`...)
+	buff = append(buff, `<div>* `...)
+	buff = append(buff, html.EscapeString(title)...)
+
+	buff = append(buff, ` <span class=item data-url='/t/`...)
+	buff = append(buff, html.EscapeString(u[0])...)
+	buff = append(buff, "@"...)
+	buff = append(buff, html.EscapeString(u[1])...)
+	buff = append(buff, `'>[raw]</span>`...)
+
+	buff = append(buff, ` <span class=item data-url='https://`...)
 	buff = append(buff, html.EscapeString(u[0])...)
 	buff = append(buff, "/p/"...)
 	buff = append(buff, html.EscapeString(u[1])...)
-	buff = append(buff, `'>* `...)
-	buff = append(buff, html.EscapeString(title)...)
+	buff = append(buff, `'>[edit]</span>`...)
+
 	buff = append(buff, `</div>`...)
 	return buff
 }
@@ -134,7 +162,7 @@ func (cache *Cache) GetPage(host, id string) (page *CachePage) {
 	cache.Lock()
 	defer cache.Unlock()
 	page = cache.M[host+"@"+id]
-	if page == nil {
+	if page == nil || time.Since(page.LastMod) > 20*time.Minute {
 		go func() {
 			page := FetchPage(host, id)
 			if page != nil {
