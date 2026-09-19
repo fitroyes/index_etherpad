@@ -1,0 +1,50 @@
+body {
+	margin: 0;
+	display: grid;
+	grid-template-columns: 50ex 1fr;
+	font-family: sans;
+	word-break: break-word;
+}
+
+body>* {
+	overflow-y: scroll;
+	box-sizing: border-box;
+	height: 100vh;
+	width: 100%;
+}
+
+nav {
+	padding: 1rem;
+	background: #6CB4EE;
+
+	&>div {
+		margin: .5rem 0;
+	}
+
+	.item:hover,
+	.selected {
+		text-decoration: underline;
+	}
+
+	a {
+		color: inherit;
+	}
+}
+
+iframe {
+	border: none;
+}
+
+main {
+	padding: 1rem;
+	white-space: pre-wrap;
+}
+
+input {
+	font: inherit;
+	font-size: xx-large;
+}
+
+#u {
+	width: 100%;
+}
